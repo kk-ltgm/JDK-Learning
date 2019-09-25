@@ -395,25 +395,25 @@ public class ThreadLocal<T> {
             // 计算key的hash值
             int i = key.threadLocalHashCode & (len-1);
 
-            // ((i + 1 < len) ? i + 1 : 0);
-            // 获取下标i位置的Entry，如果已经存储了对象，就往后挪一个位置，直到找到空位置
+            // 获取下标i位置的Entry，如果遇到hash冲突，就进行线性探测查找key应该存储的位置
             for (Entry e = tab[i]; e != null; e = tab[i = nextIndex(i, len)]) {
-                // 获取当前Entry上存储的ThreadLocal
+                // 获取当前Entry上存储的ThreadLocal，赋值为k
                 ThreadLocal<?> k = e.get();
 
-                // 如果和待存储的ThreadLocal对象地址相同，则直接替换value值
+                // 如果当前Entry上存储的ThreadLocal和待存储的ThreadLocal对象地址相同，则直接替换Entry的value值
                 if (k == key) {
                     e.value = value;
                     return;
                 }
 
+                // 如果当前Entry上存储的ThreadLocal为null，说明Entry已经过期
                 if (k == null) {
                     replaceStaleEntry(key, value, i);
                     return;
                 }
             }
 
-            // 将ThreadLocal存放在table下标i位置
+            // 如果没有遇到hash冲突，直接将ThreadLocal存放在下标i位置
             tab[i] = new Entry(key, value);
             // 已经存放的Entry总数量+1
             int sz = ++size;
@@ -465,7 +465,9 @@ public class ThreadLocal<T> {
             // We clean out whole runs at a time to avoid continual
             // incremental rehashing due to garbage collector freeing
             // up refs in bunches (i.e., whenever the collector runs).
+            // 复制staleSlot
             int slotToExpunge = staleSlot;
+            // 找到上一个已过期的Entry
             for (int i = prevIndex(staleSlot, len);
                  (e = tab[i]) != null;
                  i = prevIndex(i, len))
