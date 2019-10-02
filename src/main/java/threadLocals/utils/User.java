@@ -3,14 +3,8 @@
  * All rights reserved.
  *
  */
-package threadLocals;
+package threadLocals.utils;
 
-/**
- * 在这里编写类的功能描述
- *
- * @author kangkai
- * 2019/9/30
- */
 public class User {
 
     private Integer id;

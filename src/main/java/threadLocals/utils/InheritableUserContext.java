@@ -3,17 +3,15 @@
  * All rights reserved.
  *
  */
-package threadLocals;
+package threadLocals.utils;
 
 /**
- * 在这里编写类的功能描述
+ * 可继承的ThreadLocal
  *
- * @author kangkai
- * 2019/9/30
  */
-public class UserContext {
+public class InheritableUserContext {
 
-    private static final ThreadLocal<User> USER_CONTEXT = new ThreadLocal<>();
+    private static final ThreadLocal<User> USER_CONTEXT = new InheritableThreadLocal<>();
 
     public static User getUser() {
         return USER_CONTEXT.get();
