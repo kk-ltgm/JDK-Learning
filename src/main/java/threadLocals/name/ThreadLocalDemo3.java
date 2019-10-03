@@ -15,7 +15,7 @@ import java.util.concurrent.*;
  * @author kangkai
  * 2019/10/2
  */
-public class Demo3 {
+public class ThreadLocalDemo3 {
 
     public static ExecutorService getThreadPool() {
         int corePoolSize = 1;

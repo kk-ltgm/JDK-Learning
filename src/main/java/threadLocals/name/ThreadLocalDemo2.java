@@ -16,7 +16,7 @@ import threadLocals.utils.User;
  * 3.InheritableThreadLocal不适合用在线程池中
  *
  */
-public class Demo2 {
+public class ThreadLocalDemo2 {
 
     public static void main(String[] args) {
         InheritableUserContext.setUser(new User(1, "name1"));

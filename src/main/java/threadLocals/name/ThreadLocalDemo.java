@@ -1,21 +1,16 @@
-## 什么是ThreadLocal
-ThreadLocal官方文档：
-```java
-/**
- * This class provides thread-local variables.  These variables differ from
- * their normal counterparts in that each thread that accesses one (via its
- * {@code get} or {@code set} method) has its own, independently initialized
- * copy of the variable.  {@code ThreadLocal} instances are typically private
- * static fields in classes that wish to associate state with a thread (e.g.,
- * a user ID or Transaction ID).
+/*
+ * Copyright (c) 2019 maoyan.com
+ * All rights reserved.
+ *
  */
-```
-中文翻译：ThreadLocal称为线程本地变量。在每个访问此变量的Thread中都会创建一个变量副本。ThreadLocal变量通常需要private static修饰。
+package threadLocals.name;
 
-
-
-## ThreadLocal使用示例
-```java
+/**
+ * 在这里编写类的功能描述
+ *
+ * @author kangkai
+ * 2019/10/3
+ */
 public class ThreadLocalDemo {
 
     public static class Context {
@@ -48,12 +43,5 @@ public class ThreadLocalDemo {
         }
     }
 }
-```
-运行结果如下，可以发现，Context类中NUM_CONTEXT的值，对于每个线程来说是隔离的。
-```text
-Thread-0: 1000
-Thread-3: 1003
-Thread-4: 1004
-Thread-1: 1001
-Thread-2: 1002
-```
+
+    
