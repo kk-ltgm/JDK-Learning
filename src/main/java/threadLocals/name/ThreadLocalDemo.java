@@ -15,8 +15,7 @@ public class ThreadLocalDemo {
 
     public static class Context {
 
-        // 线程本地变量NUM_CONTEXT
-        private static final ThreadLocal<Integer> NUM_CONTEXT = new ThreadLocal<>();
+        private static ThreadLocal<Integer> NUM_CONTEXT = new ThreadLocal<>();
 
         public static Integer getNum() {
             return NUM_CONTEXT.get();
@@ -25,22 +24,29 @@ public class ThreadLocalDemo {
         public static void setNum(Integer num) {
             NUM_CONTEXT.set(num);
         }
-
-        public static void remoteNum() {
-            NUM_CONTEXT.remove();
-        }
     }
 
     public static void main(String[] args) {
-        // 构造5个线程，在每个线程内调用Context.setNum(num)，再打印Context.getNum()
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < 1; i++) {
             int num = 1000 + i;
             Thread thread = new Thread(() -> {
                 Context.setNum(num);
-                System.out.println(Thread.currentThread().getName() + ": " + Context.getNum());
+                print();
             });
             thread.start();
         }
+
+//        运行结果：
+//        Thread-0: 1000
+//        Thread-3: 1003
+//        Thread-2: 1002
+//        Thread-4: 1004
+//        Thread-1: 1001
+    }
+
+    public static void print() {
+        Integer num = Context.getNum();
+        System.out.println(Thread.currentThread().getName() + ": " + num);
     }
 }
 
