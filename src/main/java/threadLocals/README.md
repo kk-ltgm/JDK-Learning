@@ -1,5 +1,5 @@
 ## 什么是ThreadLocal
-ThreadLocal官方文档：
+下面是ThreadLocal的官方文档：
 ```java
 /**
  * This class provides thread-local variables.  These variables differ from
@@ -59,6 +59,135 @@ public class ThreadLocalDemo {
 
 
 ## ThreadLocal实现原理
+* 在每个Thread内部都有一个threadLocals，存储当前Thread所有的ThreadLocal变量副本
+```java
+public class Thread implements Runnable {
+    // ... 
+    /*
+     * InheritableThreadLocal values pertaining to this thread. This map is
+     * maintained by the InheritableThreadLocal class.
+     */
+    ThreadLocal.ThreadLocalMap threadLocals = null;
+}
+```
+* ThreadLocalMap定义在ThreadLocal中，可暂时理解为它是一个HashMap，key是ThreadLocal对象，value是当前线程中的变量副本
+```java
+public class ThreadLocal<T> {
+    static class ThreadLocalMap {
+        ThreadLocalMap(ThreadLocal<?> firstKey, Object firstValue) {
+            // ...
+        }
+    }
+}
+```
+* ThreadLocal是Thread中threadLocals的管理者。对于ThreadLocal的get()、set()、remove()都是针对当前Thread中的threadLocals进行操作
+```java
+public class ThreadLocal<T> {
+    /**
+     * 线程本地变量的初始值
+     * 1.只有在第一次调用get()方法时，才会调用此方法并设置初始值
+     * 2.如果直接调用set()方法，此方法不会被调用
+     * 3.如果调用remove()之后，再次调用get()方法时，会再次调用该方法
+     *
+     * 如果需要初始值，一般情况下使用匿名子类重写此方法，建议使用{@link #withInitial(Supplier)}创建子类
+     */
+    protected T initialValue() {
+        return null;
+    }
+
+    /**
+     * 创建带初始值的一个线程本地变量，初始值initialValue()返回值从传入的Supplier中获取
+     */
+    public static <S> ThreadLocal<S> withInitial(Supplier<? extends S> supplier) {
+        return new SuppliedThreadLocal<>(supplier);
+    }
+
+    /**
+     * 创建一个线程本地变量
+     */
+    public ThreadLocal() {
+    }
+
+    /**
+     * 获取当前线程的变量副本值
+     */
+    public T get() {
+        // 获取当前线程的ThreadLocalMap
+        Thread t = Thread.currentThread();
+        ThreadLocalMap map = getMap(t);
+        // 如果ThreadLocalMap已经初始化，并且ThreadLocalMap中存在变量副本，则返回变量副本
+        if (map != null) {
+            ThreadLocalMap.Entry e = map.getEntry(this);
+            if (e != null) {
+                @SuppressWarnings("unchecked")
+                T result = (T)e.value;
+                return result;
+            }
+        }
+        // 否则，设置并返回变量副本初始值
+        return setInitialValue();
+    }
+
+    /**
+     * 设置当前线程的变量副本初始值
+     * 通过覆盖initialValue方法可设置初始值
+     */
+    private T setInitialValue() {
+        T value = initialValue();
+        Thread t = Thread.currentThread();
+        ThreadLocalMap map = getMap(t);
+        if (map != null)
+            map.set(this, value);
+        else
+            createMap(t, value);
+        return value;
+    }
+
+    /**
+     * 设置当前线程的变量副本值
+     */
+    public void set(T value) {
+        // 获取当前线程的ThreadLocalMap
+        Thread t = Thread.currentThread();
+        ThreadLocalMap map = getMap(t);
+        if (map != null)
+            // 如果ThreadLocalMap已经初始化，设置变量副本值
+            map.set(this, value);
+        else
+            // 否则，创建当前线程的ThreadLocalMap，并设置变量副本值为value
+            createMap(t, value);
+    }
+
+    /**
+     * 删除当前线程的变量副本值
+     */
+    public void remove() {
+        ThreadLocalMap m = getMap(Thread.currentThread());
+        if (m != null)
+            m.remove(this);
+    }
+
+    /**
+     * 获取指定线程的ThreadLocalMap
+     * 此方法是包私有的
+     *
+     * @param  t the current thread
+     * @return the map
+     */
+    ThreadLocalMap getMap(Thread t) {
+        return t.threadLocals;
+    }
+
+    /**
+     * 创建指定线程的ThreadLocalMap，并设置初始值firstValue
+     * 此方法是包私有的
+     */
+    void createMap(Thread t, T firstValue) {
+        t.threadLocals = new ThreadLocalMap(this, firstValue);
+    }
+}
+```
+
 > 在每个Thread中，都有一个ThreadLocal.ThreadLocalMap（可暂时理解为HashMap），
 > 存储当前Thread所有的ThreadLocal变量副本，key为当前ThreadLocal对象，value为变量副本。
 > 初始化Thread时，ThreadLocalMap为空，当任意一个ThreadLocal变量调用get()方法或set()方法时，

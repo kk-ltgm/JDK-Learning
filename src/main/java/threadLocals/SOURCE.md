@@ -103,14 +103,14 @@ public class ThreadLocal<T> {
     }
 
     /**
-     * 获取线程本地变量的值
+     * 获取当前线程的变量副本值
      */
     public T get() {
-        Thread t = Thread.currentThread();
         // 获取当前线程的ThreadLocalMap
+        Thread t = Thread.currentThread();
         ThreadLocalMap map = getMap(t);
+        // 如果ThreadLocalMap已经初始化，并且ThreadLocalMap中存在变量副本，则返回变量副本
         if (map != null) {
-            // 如果ThreadLocalMap存在，返回ThreadLocalMap中的值
             ThreadLocalMap.Entry e = map.getEntry(this);
             if (e != null) {
                 @SuppressWarnings("unchecked")
@@ -118,12 +118,13 @@ public class ThreadLocal<T> {
                 return result;
             }
         }
-        // 如果ThreadLocalMap不存在，则设置并返回initialValue
+        // 否则，设置并返回变量副本初始值
         return setInitialValue();
     }
 
     /**
-     * 设置线程本地变量初始值
+     * 设置当前线程的变量副本初始值
+     * 通过覆盖initialValue方法可设置初始值
      */
     private T setInitialValue() {
         T value = initialValue();
@@ -137,23 +138,22 @@ public class ThreadLocal<T> {
     }
 
     /**
-     * 设置线程本地变量的值为value。通常情况下，可以覆盖initialValue方法设置初始值
+     * 设置当前线程的变量副本值
      */
     public void set(T value) {
-        Thread t = Thread.currentThread();
         // 获取当前线程的ThreadLocalMap
+        Thread t = Thread.currentThread();
         ThreadLocalMap map = getMap(t);
         if (map != null)
-            // 存在时，存放当前本地变量的值到ThreadLocalMap中
+            // 如果ThreadLocalMap已经初始化，设置变量副本值
             map.set(this, value);
         else
-            // 不存在时，创建当前线程的ThreadLocalMap，并设置初始值value
+            // 否则，创建当前线程的ThreadLocalMap，并设置变量副本值为value
             createMap(t, value);
     }
 
     /**
-     * 删除线程本地变量。
-     * 下一次使用get()方法获取线程本地变量时，会进行重新初始化，
+     * 删除当前线程的变量副本值
      */
     public void remove() {
         ThreadLocalMap m = getMap(Thread.currentThread());
