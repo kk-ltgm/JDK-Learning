@@ -1,5 +1,3 @@
-[TOC]
-
 ## 什么是ThreadLocal
 下面是ThreadLocal的官方文档：
 ```java
@@ -15,59 +13,11 @@
 中文翻译：ThreadLocal称为线程本地变量。在每个访问此变量的Thread中都会创建一个变量副本。ThreadLocal变量通常需要private static修饰。
 
 
-
 ## ThreadLocal使用示例
-1. 在Context类中定义一个线程本地变量NUM_CONTEXT
-2. 构造5个线程，每个线程存储并获取当前的NUM_CONTEXT
+### demo1：登录用户信息处理
+在以下代码中，我们模拟登录用户信息上下文设置场景，来测试ThreadLocal变量副本作用。
+
 ```java
-public class ThreadLocalDemo {
-
-    public static class Context {
-
-        private static ThreadLocal<Integer> NUM_CONTEXT = new ThreadLocal<>();
-
-        public static Integer getNum() {
-            return NUM_CONTEXT.get();
-        }
-
-        public static void setNum(Integer num) {
-            NUM_CONTEXT.set(num);
-        }
-    }
-
-    public static void main(String[] args) {
-        for (int i = 0; i < 5; i++) {
-            int num = 1000 + i;
-            Thread thread = new Thread(() -> {
-                Context.setNum(num);
-                print();
-            });
-            thread.start();
-        }
-    }
-
-    public static void print() {
-        System.out.println(Thread.currentThread().getName() + ": " + Context.getNum());
-    }
-}
-
-public class UserContext {
-
-    private static final ThreadLocal<User> USER_CONTEXT = new ThreadLocal<>();
-
-    public static User getUser() {
-        return USER_CONTEXT.get();
-    }
-
-    public static void setUser(User user) {
-        USER_CONTEXT.set(user);
-    }
-
-    public static void remoteUser() {
-        USER_CONTEXT.remove();
-    }
-}
-
 // 用户信息
 public class User {
 
@@ -104,19 +54,97 @@ public class User {
                 '}';
     }
 }
+
+
+// 登录用户信息上下文
+public class UserContext {
+
+    private static final ThreadLocal<User> USER_CONTEXT = new ThreadLocal<>();
+
+    public static User getUser() {
+        return USER_CONTEXT.get();
+    }
+
+    public static void setUser(User user) {
+        USER_CONTEXT.set(user);
+    }
+
+    public static void remoteUser() {
+        USER_CONTEXT.remove();
+    }
+}
+
+public class ThreadLocalDemo {
+
+    public static void main(String[] args) {
+        // 在main线程中设置当前用户信息为user1
+        User user1 = new User(1, "user1");
+        UserContext.setUser(user1);
+        // 打印main线程中当前用户信息，输出结果为user1
+        printUser();
+
+        Thread thread = new Thread(() -> {
+            // 打印子线程中当前用户信息，输出结果为null
+            printUser();
+
+            // 在子线程中设置当前用户信息为user2
+            User user2 = new User(2, "user2");
+            UserContext.setUser(user2);
+            // 打印子线程中当前用户信息，输出结果为user2
+            printUser();
+        });
+        thread.start();
+
+        // 再打印main线程中当前用户信息，输出结果仍是user1
+        printUser();
+    }
+
+    public static void printUser() {
+        System.out.println("thread[" + Thread.currentThread().getName() + "] user:" + UserContext.getUser());
+    }
+}
 ```
 运行结果：
 ```text
-Thread-0: 1000
-Thread-3: 1003
-Thread-2: 1002
-Thread-4: 1004
-Thread-1: 1001
+thread[main] user:User{id=1, name='user1'}
+thread[Thread-0] user:null
+thread[Thread-0] user:User{id=2, name='user2'}
+thread[main] user:User{id=1, name='user1'}
+```
+
+实际项目中，通常是在拦截器中设置登录用户信息上下文，请求处理之前，根据token获取用户信息并调用UserContext.serUser()，请求处理结束，调用UserContext.removeUser()删除当前登录用户上下文
+
+
+### demo2：ThreadLocal初始化
+```java
+public class ThreadLocalDemo2 {
+
+    // 第1种方法，重写initialValue()方法
+    private static final ThreadLocal<User> USER_CONTEXT1 = new ThreadLocal(){
+        @Override
+        protected Object initialValue() {
+            return new User(1, "user1");
+        }
+    };
+
+    // 第2种方法，调用ThreadLocal中withInitial()静态方法
+    private static final ThreadLocal<User> USER_CONTEXT2 = ThreadLocal.withInitial(() -> new User(1, "user1"));
+
+    public static void main(String[] args) {
+        System.out.println(ThreadLocalDemo2.USER_CONTEXT1.get());
+        System.out.println(ThreadLocalDemo2.USER_CONTEXT2.get());
+    }
+}
+```
+运行结果：
+```text
+User{id=1, name='user1'}
+User{id=1, name='user1'}
 ```
 
 
-## ThreadLocal实现原理
-**在每个Thread内部都有一个ThreadLocalMap，存储当前Thread所有的ThreadLocal变量副本**
+## ThreadLocal源码浅析
+在每个Thread内部都有一个ThreadLocalMap，存储当前Thread所有的ThreadLocal变量副本
 ```java
 package java.lang;
 
@@ -128,7 +156,7 @@ public class Thread implements Runnable {
     ThreadLocal.ThreadLocalMap threadLocals = null;
 }
 ```
-**ThreadLocalMap定义在ThreadLocal中，可暂时理解为它是一个HashMap，key是ThreadLocal对象，value是线程变量副本**
+ThreadLocalMap定义在ThreadLocal中，可暂时理解为它是一个HashMap，key是ThreadLocal对象，value是线程变量副本
 ```java
 package java.lang;
 
@@ -140,7 +168,7 @@ public class ThreadLocal<T> {
     }
 }
 ```
-**ThreadLocal是Thread中ThreadLocalMap的管理者。对于ThreadLocal的set()、get()、remove()的操作结果，都是针对当前Thread中的ThreadLocalMap进行存储、获取、删除操作。**
+ThreadLocal是Thread中ThreadLocalMap的管理者。对于ThreadLocal的set()、get()、remove()的操作结果，都是针对当前Thread中的ThreadLocalMap进行存储、获取、删除操作。
 
 具体分析看以下代码：
 ```java
@@ -251,20 +279,133 @@ public class ThreadLocal<T> {
     }
 }
 ```
-> 注意：ThreadLocal中可以直接调用`t.threadLocals`是因为Thread与ThreadLocal在同一个包下，
-> 同样Thread可以直接访问`ThreadLocal.ThreadLocalMap threadLocals = null;`来进行声明属性。
+注意：ThreadLocal中可以直接调用`t.threadLocals`是因为Thread与ThreadLocal在同一个包下，同样Thread可以直接访问`ThreadLocal.ThreadLocalMap threadLocals = null;`来进行声明属性。
 
 
+## ThreadLocalMap源码浅析
+** 占位 ** 
 
 
-## ThreadLocalMap实现原理
+## 线程上下文传递
+### demo3：使用InheritableThreadLocal传递线程上下文
+在上面的登录用户信息demo中，虽然main线程和子线程中变量副本值是不一样的。但在实际开发场景中，我们总是需要将父线程中上下文信息传递到子线程中进行使用。
+对于以上问题，使用InheritableThreadLocal可以轻松解决，只需要将ThreadLocal替换为InheritableThreadLocal，我们对上面的代码进行改造：
 
+```java
+public class InheritableUserContext {
 
+    private static final ThreadLocal<User> USER_CONTEXT = new InheritableThreadLocal<>();
 
+    public static User getUser() {
+        return USER_CONTEXT.get();
+    }
 
+    public static void setUser(User user) {
+        USER_CONTEXT.set(user);
+    }
 
+    public static void remoteUser() {
+        USER_CONTEXT.remove();
+    }
+}
 
+public class ThreadLocalDemo3 {
 
+    public static void main(String[] args) {
+        // 在main线程中设置当前用户信息为user1
+        User user1 = new User(1, "user1");
+        InheritableUserContext.setUser(user1);
+        // 打印main线程中当前用户信息，输出结果为user1
+        printUser();
+
+        Thread thread = new Thread(() -> {
+            // 打印子线程中当前用户信息，输出结果为null
+            printUser();
+
+            Thread thread1 = new Thread(() -> {
+                printUser();
+            });
+            thread1.start();
+        });
+        thread.start();
+    }
+
+    public static void printUser() {
+        System.out.println("thread[" + Thread.currentThread().getName() + "] user:" + InheritableUserContext.getUser());
+    }
+}
+```
+执行结果：
+```text
+thread[main] user:User{id=1, name='user1'}
+thread[Thread-0] user:User{id=1, name='user1'}
+thread[Thread-1] user:User{id=1, name='user1'}
+```
+
+### InheritableThreadLocal源码浅析
+InheritableThreadLocal继承自ThreadLocal，并重写了父类三个方法，不同于ThreadLocal，InheritableThreadLocal变量存放在Thread.inheritableThreadLocals而不是Thread.threadLocals中：
+```java
+public class InheritableThreadLocal<T> extends ThreadLocal<T> {
+    protected T childValue(T parentValue) {
+        return parentValue;
+    }
+
+    ThreadLocalMap getMap(Thread t) {
+       return t.inheritableThreadLocals;
+    }
+
+    void createMap(Thread t, T firstValue) {
+        t.inheritableThreadLocals = new ThreadLocalMap(this, firstValue);
+    }
+}
+```
+
+在new一个线程时，init()方法中会复制parent线程（当前调用线程）中的inheritableThreadLocals到新创建线程中
+```java
+public class Thread implements Runnable {
+    
+    ThreadLocal.ThreadLocalMap inheritableThreadLocals = null;
+    
+    public Thread() {
+        init(null, null, "Thread-" + nextThreadNum(), 0);
+    }
+    
+    private void init(ThreadGroup g, Runnable target, String name,
+                      long stackSize) {
+        init(g, target, name, stackSize, null, true);
+    }
+    
+    
+    private void init(ThreadGroup g, Runnable target, String name,
+                          long stackSize, AccessControlContext acc,
+                          boolean inheritThreadLocals) {
+        // 继承父线程中的inheritableThreadLocals
+        if (inheritThreadLocals && parent.inheritableThreadLocals != null)
+            this.inheritableThreadLocals =
+                ThreadLocal.createInheritedMap(parent.inheritableThreadLocals);
+    }
+}
+
+```
+
+ThreadLocal也为Thread.inheritableThreadLocals复制提供了相应的接口：
+```java
+public class ThreadLocal<T> {
+    
+    static ThreadLocalMap createInheritedMap(ThreadLocalMap parentMap) {
+        return new ThreadLocalMap(parentMap);
+    }
+    
+    static class ThreadLocalMap {
+        private ThreadLocalMap(ThreadLocalMap parentMap) {
+            // ...
+        }
+    }
+}
+```
+
+### demo4：实际项目中的上下文传递
+在实际项目中，我们一般都使用线程池，而不是在每次使用时创建一个新的线程，显然，使用InheritableThreadLocal并不能解决实际的开发需求。
 
 
 

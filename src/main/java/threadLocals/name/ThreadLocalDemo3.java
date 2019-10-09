@@ -5,52 +5,41 @@
  */
 package threadLocals.name;
 
-import threadLocals.utils.*;
-
-import java.util.concurrent.*;
+import threadLocals.utils.InheritableUserContext;
+import threadLocals.utils.User;
+import threadLocals.utils.UserContext;
 
 /**
- * 在这里编写类的功能描述
+ * 通过InheritableThreadLocal实现ThreadLocal传递
  *
- * @author kangkai
- * 2019/10/2
+ * 1.InheritableThreadLocal变量存放在Thread.inheritableThreadLocals而不是Thread.threadLocals中
+ * 2.new Thread()时，init()中会复制parent线程中的inheritableThreadLocals到当前线程
+ * 3.InheritableThreadLocal不适合用在线程池中
+ *
  */
 public class ThreadLocalDemo3 {
 
-    public static ExecutorService getThreadPool() {
-        int corePoolSize = 1;
-        int maximumPoolSize = 1;
-        long keepAliveTime = 10;
-        TimeUnit unit = TimeUnit.MINUTES;
-        LinkedBlockingDeque<Runnable> workQueue = new LinkedBlockingDeque<>(100);
-        ThreadFactory threadFactory = Executors.defaultThreadFactory();
-        ThreadPoolExecutor.CallerRunsPolicy rejectedExecutionHandler = new ThreadPoolExecutor.CallerRunsPolicy();
-        return new ThreadPoolExecutor(corePoolSize, maximumPoolSize, keepAliveTime, unit, workQueue, threadFactory,
-                rejectedExecutionHandler);
+    public static void main(String[] args) {
+        // 在main线程中设置当前用户信息为user1
+        User user1 = new User(1, "user1");
+        InheritableUserContext.setUser(user1);
+        // 打印main线程中当前用户信息，输出结果为user1
+        printUser();
+
+        Thread thread = new Thread(() -> {
+            // 打印子线程中当前用户信息，输出结果为null
+            printUser();
+
+            Thread thread1 = new Thread(() -> {
+                printUser();
+            });
+            thread1.start();
+        });
+        thread.start();
     }
 
-    public static void main(String[] args) {
-        UserContext.setUser(new User(1, "name1"));
-        System.out.println("thread[" + Thread.currentThread().getName() + "] user:" + UserContext.getUser());
-
-        Runnable userRunnable = UserRunnable.get(() -> {
-            System.out.println("thread[" + Thread.currentThread().getName() + "] user:" + UserContext.getUser());
-        });
-
-
-        ExecutorService threadPool = getThreadPool();
-        threadPool.execute(UserRunnable.get(() -> {
-            System.out.println("thread[" + Thread.currentThread().getName() + "] user:" + UserContext.getUser());
-        }));
-        UserContext.setUser(new User(2, "name2"));
-        System.out.println("thread[" + Thread.currentThread().getName() + "] user:" + UserContext.getUser());
-        threadPool.execute(UserRunnable.get(() -> {
-            System.out.println("thread[" + Thread.currentThread().getName() + "] user:" + UserContext.getUser());
-        }));
-
-        System.out.println("aaa");
-
-        threadPool.shutdown();
+    public static void printUser() {
+        System.out.println("thread[" + Thread.currentThread().getName() + "] user:" + InheritableUserContext.getUser());
     }
 }
 
