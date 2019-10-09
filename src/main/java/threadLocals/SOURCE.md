@@ -83,7 +83,7 @@ public class ThreadLocal<T> {
      * 2.如果直接调用set()方法，此方法不会被调用
      * 3.如果调用remove()之后，再次调用get()方法时，会再次调用该方法
      *
-     * 如果需要初始值，一般情况下使用匿名子类重写此方法，建议使用{@link #withInitial(Supplier)}创建子类
+     * 如果需要初始值，一般情况下使用匿名子类重写此方法，建议使用ThreadLocal.withInitial()创建子类
      */
     protected T initialValue() {
         return null;
