@@ -15,13 +15,24 @@ import threadLocals.utils.UserContext;
 public class ThreadLocalDemo1 {
 
     public static void main(String[] args) {
-        UserContext.setUser(new User(1, "name1"));
-        System.out.println("thread[" + Thread.currentThread().getName() + "] user:" + UserContext.getUser());
+        User user1 = new User(1, "user1");
+        UserContext.setUser(user1);
+        printUser();
 
         Thread thread = new Thread(() -> {
-            System.out.println("thread[" + Thread.currentThread().getName() + "] user:" + UserContext.getUser());
+            printUser();
+
+            User user2 = new User(2, "user2");
+            UserContext.setUser(user2);
+            printUser();
         });
         thread.start();
+
+        printUser();
+    }
+
+    public static void printUser() {
+        System.out.println("thread[" + Thread.currentThread().getName() + "] user:" + UserContext.getUser());
     }
 }
 

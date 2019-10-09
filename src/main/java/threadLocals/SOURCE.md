@@ -221,19 +221,8 @@ public class ThreadLocal<T> {
     }
 
     /**
-     * ThreadLocalMap is a customized hash map suitable only for
-     * maintaining thread local values. No operations are exported
-     * outside of the ThreadLocal class. The class is package private to
-     * allow declaration of fields in class Thread.  To help deal with
-     * very large and long-lived usages, the hash table entries use
-     * WeakReferences for keys. However, since reference queues are not
-     * used, stale entries are guaranteed to be removed only when
-     * the table starts running out of space.
-     *
-     *
      * ThreadLocalMap是为维护线程本地变量而自定义的散列表。只能在ThreadLocal类中进行操作。
      * ThreadLocalMap是包私有的，可以在Thread类中声明ThreadLocalMap字段。
-     *
      */
     static class ThreadLocalMap {
 

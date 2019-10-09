@@ -1,3 +1,5 @@
+[TOC]
+
 ## 什么是ThreadLocal
 下面是ThreadLocal的官方文档：
 ```java
@@ -48,6 +50,60 @@ public class ThreadLocalDemo {
         System.out.println(Thread.currentThread().getName() + ": " + Context.getNum());
     }
 }
+
+public class UserContext {
+
+    private static final ThreadLocal<User> USER_CONTEXT = new ThreadLocal<>();
+
+    public static User getUser() {
+        return USER_CONTEXT.get();
+    }
+
+    public static void setUser(User user) {
+        USER_CONTEXT.set(user);
+    }
+
+    public static void remoteUser() {
+        USER_CONTEXT.remove();
+    }
+}
+
+// 用户信息
+public class User {
+
+    private Integer id;
+
+    private String name;
+
+    public User(Integer id, String name) {
+        this.id = id;
+        this.name = name;
+    }
+
+    public Integer getId() {
+        return id;
+    }
+
+    public void setId(Integer id) {
+        this.id = id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    @Override
+    public String toString() {
+        return "User{" +
+                "id=" + id +
+                ", name='" + name + '\'' +
+                '}';
+    }
+}
 ```
 运行结果：
 ```text
@@ -60,7 +116,7 @@ Thread-1: 1001
 
 
 ## ThreadLocal实现原理
-在每个Thread内部都有一个threadLocals，存储当前Thread所有的ThreadLocal变量副本
+**在每个Thread内部都有一个ThreadLocalMap，存储当前Thread所有的ThreadLocal变量副本**
 ```java
 package java.lang;
 
@@ -72,7 +128,7 @@ public class Thread implements Runnable {
     ThreadLocal.ThreadLocalMap threadLocals = null;
 }
 ```
-ThreadLocalMap定义在ThreadLocal中，可暂时理解为它是一个HashMap，key是ThreadLocal对象，value是线程变量副本
+**ThreadLocalMap定义在ThreadLocal中，可暂时理解为它是一个HashMap，key是ThreadLocal对象，value是线程变量副本**
 ```java
 package java.lang;
 
@@ -84,9 +140,9 @@ public class ThreadLocal<T> {
     }
 }
 ```
-ThreadLocal是Thread中threadLocals的管理者。
+**ThreadLocal是Thread中ThreadLocalMap的管理者。对于ThreadLocal的set()、get()、remove()的操作结果，都是针对当前Thread中的ThreadLocalMap进行存储、获取、删除操作。**
 
-对于ThreadLocal的set()、get()、remove()的操作结果，都是针对当前Thread中的threadLocals进行存储、获取、删除操作。具体分析看一下代码：
+具体分析看以下代码：
 ```java
 package java.lang;
 
@@ -195,7 +251,13 @@ public class ThreadLocal<T> {
     }
 }
 ```
-> 注意：ThreadLocal中可以直接t.threadLocals是因为Thread与ThreadLocal在同一个包下，同样Thread可以直接访问ThreadLocal.ThreadLocalMap threadLocals = null;来进行声明属性。
+> 注意：ThreadLocal中可以直接调用`t.threadLocals`是因为Thread与ThreadLocal在同一个包下，
+> 同样Thread可以直接访问`ThreadLocal.ThreadLocalMap threadLocals = null;`来进行声明属性。
+
+
+
+
+## ThreadLocalMap实现原理
 
 
 
