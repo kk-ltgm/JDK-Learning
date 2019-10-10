@@ -1,4 +1,5 @@
 ## 什么是ThreadLocal
+网上关于ThreadLocal的介绍非常多，有人说ThreadLocal大家都各执己见。
 下面是ThreadLocal的官方文档：
 ```java
 /**
@@ -141,6 +142,7 @@ public class ThreadLocalDemo2 {
 User{id=1, name='user1'}
 User{id=1, name='user1'}
 ```
+
 
 
 ## ThreadLocal源码浅析
@@ -405,15 +407,171 @@ public class ThreadLocal<T> {
 ```
 
 ### demo4：实际项目中的上下文传递
-在实际项目中，我们一般都使用线程池，而不是在每次使用时创建一个新的线程，显然，使用InheritableThreadLocal并不能解决实际的开发需求。
+在实际应用场景里，一般都会使用线程池进行多线程编程，线程池中的线程会反复使用，应用需要的是把任务提交给线程池时的ThreadLocal传递给任务执行。
+在线程池中运行一个Runnable实例并不会新建一个线程，而是把Runnable实例添加到任务队列中（在核心线程全部在处理任务的情况），
+让ThreadPoolExecutor的worker从队列里拿出Runnable实例，然后运行Runnable实例的run()方法。
+这时，父子线程的ThreadLocal传递已经没有意义，jdk提供的InheritableThreadLocal没办法使用。下面我们就看一下在线程池中怎么进行上下文传递：
 
 
+假设我们的调用链通过TraceContext类来保存上下文信息
+```java
+public class TraceContext {
+
+    private static final ThreadLocal<Object> CONTEXT = new ThreadLocal<>();
+
+    public static Object getContext() {
+        return CONTEXT.get();
+    }
+    public static void setContext(Object obj) {
+        CONTEXT.set(obj);
+    }
+    public static void removeContext() {
+        CONTEXT.remove();
+    }
+}
+```
+
+先定义2个类TraceRunnable和TraceCallable，分别继承自Runnable和Callable，目的在于初始化Runnable和Callable实例时保存调用线程的上下文信息，
+在执行run()或者call()方法时，先把调用线程的上下文信息设置到当前执行的线程中，run()/call()方法执行后恢复执行线程的上下文
+
+```java
+public class TraceRunnable implements Runnable {
+
+    //在初始化TraceRunnable时会获取调用线程的上下文
+    private final Object context = TraceContext.getContext();
+
+    private final Runnable runnable;
+
+    public TraceRunnable(Runnable runnable) {
+        this.runnable = runnable;
+    }
+
+    @Override
+    public void run() {
+        Object backup = TraceContextUtil.backupAndSet(this.context);
+
+        try {
+            this.runnable.run();
+        } finally {
+            TraceContextUtil.restoreBackup(backup);
+        }
+    }
+
+    public Runnable getRunnable() {
+        return this.runnable;
+    }
+
+    public static TraceRunnable get(Runnable runnable) {
+        if (runnable == null) {
+            return null;
+        } else {
+            return runnable instanceof TraceRunnable ? (TraceRunnable)runnable : new TraceRunnable(runnable);
+        }
+    }
+}
+
+public class TraceCallable<V> implements Callable<V> {
+
+    //在初始化TraceCallable时会获取调用线程的上下文
+    private final Object context = TraceContext.getContext();
+
+    private final Callable<V> callable;
+
+    public TraceCallable(Callable<V> callable) {
+        this.callable = callable;
+    }
+
+    @Override
+    public V call() throws Exception {
+        Object backup = TraceContextUtil.backupAndSet(this.context);
+
+        V result;
+        try {
+            result = this.callable.call();
+        } finally {
+            TraceContextUtil.restoreBackup(backup);
+        }
+
+        return result;
+    }
+
+    public Callable<V> getCallable() {
+        return this.callable;
+    }
+
+    //返回TraceCallable实例
+    public static <T> TraceCallable<T> get(Callable<T> callable) {
+        if (callable == null) {
+            return null;
+        } else {
+            return callable instanceof TraceCallable ? (TraceCallable)callable : new TraceCallable<>(callable);
+        }
+    }
+}
 
 
+public class TraceContextUtil {
+
+    //设置调用线程的上下文到当前执行线程中,并返回执行线程之前的上下文
+    public static Object backupAndSet(Object currentContext) {
+        Object backupContext = TraceContext.getContext();
+        TraceContext.setContext(currentContext);
+        return backupContext;
+    }
+
+    //恢复执行线程的上下文
+    public static void restoreBackup(Object backup) {
+        TraceContext.setContext(backup);
+    }
+}
+```
+
+接下来，我们在线程池中执行TraceRunnble和TraceCallable实现上下文传递：
+```java
+public class ThreadLocalDemo {
+
+    public static void main(String[] args) throws ExecutionException, InterruptedException {
+        ExecutorService threadPool = Executors.newFixedThreadPool(4);
+
+        TraceContext.setContext("0123456789");
+
+        for (int i = 0; i < 5; i++) {
+            threadPool.execute(TraceRunnable.get(() -> {
+                printContext();
+            }));
+
+            Future<Integer> task = threadPool.submit(TraceCallable.get(() -> {
+                printContext();
+                return 1;
+            }));
+            task.get();
+        }
+
+        threadPool.shutdown();
+    }
 
 
+    public static void printContext() {
+        System.out.println("thread[" + Thread.currentThread().getName() + "] context: " + TraceContext.getContext());
+    }
+}
+```
+执行结果：
+```text
+thread[pool-1-thread-1] context: 0123456789
+thread[pool-1-thread-2] context: 0123456789
+thread[pool-1-thread-3] context: 0123456789
+thread[pool-1-thread-4] context: 0123456789
+thread[pool-1-thread-1] context: 0123456789
+thread[pool-1-thread-2] context: 0123456789
+thread[pool-1-thread-3] context: 0123456789
+thread[pool-1-thread-4] context: 0123456789
+thread[pool-1-thread-1] context: 0123456789
+thread[pool-1-thread-2] context: 0123456789
+```
+在分布式系统中，需要传递的信息一般包括traceID、 spanID以及部分请求参数等。就可以使用这种方式进行上下文传递。
 
 
-
-
-
+参考文章：
+* <https://blog.csdn.net/zhuzj12345/article/details/84333765>
+* <https://www.ezlippi.com/blog/2019/05/trace-context-bwtween-threads.html>

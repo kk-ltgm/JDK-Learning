@@ -5,8 +5,6 @@
  */
 package threadLocals.utils;
 
-import threadLocals.utils.User;
-
 public class UserContext {
 
     private static final ThreadLocal<User> USER_CONTEXT = new ThreadLocal<>();
