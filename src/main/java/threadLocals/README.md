@@ -145,7 +145,7 @@ User{id=1, name='user1'}
 
 
 
-## ThreadLocal源码浅析
+## ThreadLocal源码分析
 在每个Thread内部都有一个ThreadLocalMap，存储当前Thread所有的ThreadLocal变量副本
 ```java
 package java.lang;
@@ -172,6 +172,8 @@ public class ThreadLocal<T> {
 ```
 ThreadLocal是Thread中ThreadLocalMap的管理者。对于ThreadLocal的set()、get()、remove()的操作结果，都是针对当前Thread中的ThreadLocalMap进行存储、获取、删除操作。
 
+![](./threadLocal.jpeg)
+
 具体分析看以下代码：
 ```java
 package java.lang;
@@ -187,19 +189,6 @@ public class ThreadLocal<T> {
      */
     protected T initialValue() {
         return null;
-    }
-
-    /**
-     * 创建带初始值的一个线程本地变量，初始值initialValue()返回值从传入的Supplier中获取
-     */
-    public static <S> ThreadLocal<S> withInitial(Supplier<? extends S> supplier) {
-        return new SuppliedThreadLocal<>(supplier);
-    }
-
-    /**
-     * 创建一个线程本地变量
-     */
-    public ThreadLocal() {
     }
 
     /**
@@ -284,7 +273,7 @@ public class ThreadLocal<T> {
 注意：ThreadLocal中可以直接调用`t.threadLocals`是因为Thread与ThreadLocal在同一个包下，同样Thread可以直接访问`ThreadLocal.ThreadLocalMap threadLocals = null;`来进行声明属性。
 
 
-## ThreadLocalMap源码浅析
+## ThreadLocalMap源码分析
 ** 占位 ** 
 
 
@@ -344,7 +333,7 @@ thread[Thread-0] user:User{id=1, name='user1'}
 thread[Thread-1] user:User{id=1, name='user1'}
 ```
 
-### InheritableThreadLocal源码浅析
+### InheritableThreadLocal源码分析
 InheritableThreadLocal继承自ThreadLocal，并重写了父类三个方法，不同于ThreadLocal，InheritableThreadLocal变量存放在Thread.inheritableThreadLocals而不是Thread.threadLocals中：
 ```java
 public class InheritableThreadLocal<T> extends ThreadLocal<T> {
