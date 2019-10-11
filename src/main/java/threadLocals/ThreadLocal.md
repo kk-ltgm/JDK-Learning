@@ -1,6 +1,6 @@
 [TOC]
 ## 什么是ThreadLocal
-下面是ThreadLocal的官方文档：
+ThreadLocal的官方文档：
 ```java
 /**
  * This class provides thread-local variables.  These variables differ from
@@ -46,10 +46,10 @@ public class Thread implements Runnable {
 
 
 接下来我们再看ThreadLocal，通过类图我们发现ThreadLocal提供了以下4个可供外部访问的接口：get()、set()、remove()、withInitial()
-<img src="./threadLocal.png" width="300" />
+<img src="./threadLocal.png" width="240" />
 
-
-以下是get()、set()、remove()三个接口的源码：
+<br/>
+get()、set()、remove()三个接口的源码：
 ```java
 package java.lang;
 
@@ -194,9 +194,8 @@ public class ThreadLocalDemo {
 
 ## ThreadLocal使用示例
 
-### demo1：登录用户信息处理
-在以下代码中，我们模拟登录用户信息上下文设置场景，来测试ThreadLocal变量副本作用。
-
+### 示例1：登录用户信息上下文处理
+在项目开发中，对于当前登录用户信息的处理经常会用到ThreadLocal，代码实现如下：
 ```java
 // 用户信息
 public class User {
@@ -295,11 +294,10 @@ thread[main] user:User{id=1, name='user1'}
 实际项目中，通常是在拦截器中设置登录用户信息上下文，请求处理之前，根据token获取用户信息并调用UserContext.serUser()，请求处理结束，调用UserContext.removeUser()删除当前登录用户上下文
 
 
-
-## 线程上下文传递
-### demo3：使用InheritableThreadLocal传递线程上下文
-在上面的登录用户信息demo中，虽然main线程和子线程中变量副本值是不一样的。但在实际开发场景中，我们总是需要将父线程中上下文信息传递到子线程中进行使用。
-对于以上问题，使用InheritableThreadLocal可以轻松解决，只需要将ThreadLocal替换为InheritableThreadLocal，我们对上面的代码进行改造：
+ 
+### 示例2：线程上下文传递（一）
+在开发场景中，我们总是需要将父线程中上下文信息传递到子线程中进行使用。比如示例1中，在main线程中开启一个子线程后，子线程同样需要当前用户登录信息处理一些逻辑。
+jdk中提供了一种实现方式：将ThreadLocal替换为InheritableThreadLocal：
 
 ```java
 public class InheritableUserContext {
@@ -352,7 +350,7 @@ thread[Thread-0] user:User{id=1, name='user1'}
 thread[Thread-1] user:User{id=1, name='user1'}
 ```
 
-### InheritableThreadLocal源码分析
+**InheritableThreadLocal源码分析**
 InheritableThreadLocal继承自ThreadLocal，并重写了父类三个方法，不同于ThreadLocal，InheritableThreadLocal变量存放在Thread.inheritableThreadLocals而不是Thread.threadLocals中：
 ```java
 public class InheritableThreadLocal<T> extends ThreadLocal<T> {
@@ -398,7 +396,7 @@ public class Thread implements Runnable {
 
 ```
 
-ThreadLocal也为Thread.inheritableThreadLocals复制提供了相应的接口：
+同时，ThreadLocal也为Thread.inheritableThreadLocals的复制提供了相应的接口：
 ```java
 public class ThreadLocal<T> {
     
@@ -414,10 +412,10 @@ public class ThreadLocal<T> {
 }
 ```
 
-### demo4：实际项目中的上下文传递
-在实际应用场景里，一般都会使用线程池进行多线程编程，线程池中的线程会反复使用，应用需要的是把任务提交给线程池时的ThreadLocal传递给任务执行。
-在线程池中运行一个Runnable实例并不会新建一个线程，而是把Runnable实例添加到任务队列中（在核心线程全部在处理任务的情况），
-让ThreadPoolExecutor的worker从队列里拿出Runnable实例，然后运行Runnable实例的run()方法。
+### 示例3：线程上下文传递（二）
+在实际项目中，一般都会使用线程池进行多线程编程，线程池中的线程会反复使用，应用需要的是把任务提交给线程池时的ThreadLocal传递给任务执行。
+在线程池中运行一个Runnable实例并不会新建一个线程，而是把Runnable实例添加到任务队列中（在核心线程都处理任务的情况下），
+让ThreadPoolExecutor的worker从队列里获取一个Runnable实例，然后运行Runnable实例的run()方法。
 这时，父子线程的ThreadLocal传递已经没有意义，jdk提供的InheritableThreadLocal没办法使用。下面我们就看一下在线程池中怎么进行上下文传递：
 
 
