@@ -46,10 +46,12 @@ public class Thread implements Runnable {
 
 
 接下来我们再看ThreadLocal，通过类图我们发现ThreadLocal提供了以下4个可供外部访问的接口：get()、set()、remove()、withInitial()
+
 <img src="./threadLocal.png" width="240" />
 
-<br/>
+
 get()、set()、remove()三个接口的源码：
+
 ```java
 package java.lang;
 
