@@ -353,6 +353,7 @@ thread[Thread-1] user:User{id=1, name='user1'}
 ```
 
 **InheritableThreadLocal源码分析**
+
 InheritableThreadLocal继承自ThreadLocal，并重写了父类三个方法，不同于ThreadLocal，InheritableThreadLocal变量存放在Thread.inheritableThreadLocals而不是Thread.threadLocals中：
 ```java
 public class InheritableThreadLocal<T> extends ThreadLocal<T> {
@@ -579,6 +580,8 @@ thread[pool-1-thread-2] context: 0123456789
 ```
 在分布式系统中，需要传递的信息一般包括traceID、 spanID以及部分请求参数等。就可以使用这种方式进行上下文传递。
 
+<br/>
+<br/>
 
 参考文章：
 * <https://blog.csdn.net/zhuzj12345/article/details/84333765>
