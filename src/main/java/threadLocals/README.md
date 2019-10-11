@@ -175,7 +175,7 @@ public class ThreadLocal<T> {
 <img src="./threadLocal.png" width = "360"  alt="ThreadLocal API" align=center />
 
 
-![](threadLocal.png){: width="360px"}
+![](threadLocal.png =360)
 
 具体分析看以下代码：
 ```java
