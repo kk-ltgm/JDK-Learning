@@ -172,7 +172,7 @@ public class ThreadLocal<T> {
 ```
 ThreadLocal是Thread中ThreadLocalMap的管理者。对于ThreadLocal的set()、get()、remove()的操作结果，都是针对当前Thread中的ThreadLocalMap进行存储、获取、删除操作。
 
-![](./threadLocal.png)
+<img src="./threadLocal.png" width = "300"  alt="ThreadLocal API" align=center />
 
 具体分析看以下代码：
 ```java
