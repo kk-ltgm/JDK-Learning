@@ -158,7 +158,7 @@ public class Thread implements Runnable {
     ThreadLocal.ThreadLocalMap threadLocals = null;
 }
 ```
-ThreadLocalMap定义在ThreadLocal中，可暂时理解为它是一个HashMap，key是ThreadLocal对象，value是线程变量副本
+ThreadLocalMap定义在ThreadLocal中，可以先理解为它是一个Key-Value Map，用来存储ThreadLocal变量副本，key是ThreadLocal对象，value是变量值
 ```java
 package java.lang;
 
@@ -170,9 +170,10 @@ public class ThreadLocal<T> {
     }
 }
 ```
-ThreadLocal是Thread中ThreadLocalMap的管理者。对于ThreadLocal的set()、get()、remove()的操作结果，都是针对当前Thread中的ThreadLocalMap进行存储、获取、删除操作。
+而ThreadLocal就是Thread中ThreadLocalMap的管理者。从下图可以看出ThreadLocal对外开放的接口有4个对于ThreadLocal的set()、get()、remove()的操作结果，都是针对当前Thread中的ThreadLocalMap进行存储、获取、删除操作。
 
-<img src="./threadLocal.png" width = "300"  alt="ThreadLocal API" align=center />
+<img src="./threadLocal.png" width = "360"  alt="ThreadLocal API" align=center />
+![](./threadLocal.png){width="360px"}
 
 具体分析看以下代码：
 ```java
