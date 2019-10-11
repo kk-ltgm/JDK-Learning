@@ -173,7 +173,9 @@ public class ThreadLocal<T> {
 而ThreadLocal就是Thread中ThreadLocalMap的管理者。从下图可以看出ThreadLocal对外开放的接口有4个对于ThreadLocal的set()、get()、remove()的操作结果，都是针对当前Thread中的ThreadLocalMap进行存储、获取、删除操作。
 
 <img src="./threadLocal.png" width = "360"  alt="ThreadLocal API" align=center />
-![](./threadLocal.png){width="360px"}
+
+
+![](threadLocal.png){width="360px"}
 
 具体分析看以下代码：
 ```java
