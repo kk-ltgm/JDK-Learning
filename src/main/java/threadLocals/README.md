@@ -146,14 +146,20 @@ User{id=1, name='user1'}
 
 
 ## ThreadLocal源码分析
-ThreadLocal类中主要提供了3个可供外部访问的接口，因此我们主要从这三个接口开始一步步分析源码
-get()：变量副本读取
-set()：变量副本设置
-remove()：变量副本删除
+在分析ThreadLocal源码之前，我们先看两个类，一个是ThreadLocalMap类，一个是我们常用的Thread类
 
-<img src="./threadLocal.png" width="360" />
+ThreadLocalMap：它是ThreadLocal中一个静态内部类，可以先理解为一个K/V Map，key是ThreadLocal对象，value是ThreadLocal存储的变量值，它可以存储多个ThreadLocal
+```java
+package java.lang;
 
-
+public class ThreadLocal<T> {
+    static class ThreadLocalMap {
+        ThreadLocalMap(ThreadLocal<?> firstKey, Object firstValue) {
+            // ...
+        }
+    }
+}
+```
 
 在每个Thread内部都有一个ThreadLocalMap，存储当前Thread所有的ThreadLocal变量副本
 ```java
@@ -168,19 +174,16 @@ public class Thread implements Runnable {
 }
 ```
 ThreadLocalMap定义在ThreadLocal中，可以先理解为它是一个Key-Value Map，用来存储ThreadLocal变量副本，key是ThreadLocal对象，value是变量值
-```java
-package java.lang;
 
-public class ThreadLocal<T> {
-    static class ThreadLocalMap {
-        ThreadLocalMap(ThreadLocal<?> firstKey, Object firstValue) {
-            // ...
-        }
-    }
-}
-```
 ThreadLocal是Thread中ThreadLocalMap的管理者。
 对于ThreadLocal的set()、get()、remove()的操作结果，都是针对当前Thread中的ThreadLocalMap进行存储、获取、删除操作。
+
+ThreadLocal类中主要提供了3个可供外部访问的接口，因此我们主要从这三个接口开始一步步分析源码
+* get()：变量副本读取
+* set()：变量副本设置
+* remove()：变量副本删除
+
+<img src="./threadLocal.png" width="360" />
 
 
 具体分析看以下代码：
