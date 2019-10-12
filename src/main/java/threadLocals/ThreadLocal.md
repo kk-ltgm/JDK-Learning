@@ -1,4 +1,3 @@
-[TOC]
 ## 什么是ThreadLocal
 ThreadLocal的官方文档：
 ```java
@@ -15,10 +14,11 @@ ThreadLocal的官方文档：
 
 
 ## ThreadLocal源码分析
-在分析ThreadLocal源码之前，我们先看以下两个类，一个是ThreadLocalMap，一个是Thread
+本节，我们直接对ThreadLocal源码进行分析，来进一步了解线程本地变量的含义和实现原理。
+在分析ThreadLocal源码之前，我们先了解两个类：ThreadLocalMap和Thread
 
 **ThreadLocalMap**：它是ThreadLocal中一个静态内部类，ThreadLocal存储的变量值实际都存放在ThreadLocalMap中
-（由于ThreadLocalMap原理较多，在本文不做详细介绍，可以先将它理解为一个HashMap，key是ThreadLocal对象，value是ThreadLocal存储的变量值）
+（由于ThreadLocalMap原理较多，不在本文中详细介绍，这里我们先将它理解为一个HashMap<ThreadLocal, Object>，key是ThreadLocal对象，value是ThreadLocal存储的变量值）
 ```java
 package java.lang;
 
@@ -31,7 +31,7 @@ public class ThreadLocal<T> {
 }
 ```
 
-**Thread**：在每个Thread内部都有一个ThreadLocalMap，这个ThreadLocalMap中会存储当前Thread所有的ThreadLocal变量
+**Thread**：在每个Thread内部都有一个ThreadLocalMap，用来存储当前Thread所有的ThreadLocal变量
 ```java
 package java.lang;
 
@@ -148,7 +148,7 @@ public class ThreadLocal<T> {
 }
 ```
 
-通过源码发现，ThreadLocal中get()、set()、remove()操作的是当前Thread中ThreadLocalMap。也就是ThreadLocal实现线程本地变量的主要原理。
+总结以上内容，ThreadLocal中get()、set()、remove()操作的都是当前Thread中ThreadLocalMap。这也就是使用ThreadLocal实现线程本地变量的主要原理。
 <br/>
 
 再看一下withInitial()接口的源码：
@@ -179,7 +179,7 @@ public class ThreadLocal<T> {
     }
 }
 ```
-所以，可以通过以下两种方式定义ThreadLocal初始值
+所以，以下两种方式都可以定义一个带初始值的ThreadLocal
 ```java
 public class ThreadLocalDemo {
     private static final ThreadLocal<Object> CONTEXT1 = new ThreadLocal(){
@@ -197,7 +197,11 @@ public class ThreadLocalDemo {
 ## ThreadLocal使用示例
 
 ### 示例1：登录用户信息上下文处理
-在项目开发中，对于当前登录用户信息的处理经常会用到ThreadLocal，代码实现如下：
+在项目开发中，对于登录用户信息的处理经常会用到ThreadLocal，比如spring项目在拦截器中处理相应逻辑：
+1. 在preHandle()方法中获取用户认证token，根据token获取到用户信息后，存储在ThreadLocal中，
+2. 业务逻辑中就可以使用ThreadLocal.get()获取登录用户信息
+3. 在afterCompletion()方法中调用ThreadLocal.remove()删除登录用户信息
+
 ```java
 // 用户信息
 public class User {
@@ -255,33 +259,54 @@ public class UserContext {
     }
 }
 
+
+public class LoginInterceptor implements HandlerInterceptor {
+
+    @Override
+    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+        String token = request.getHeader("token");
+//        User user = UserService.getUserByToken(token);
+        User user = new User(1, "abc");
+        UserContext.setUser(user);
+        return true;
+    }
+
+    @Override
+    public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) throws Exception {
+        UserContext.remoteUser();
+    }
+
+    @Override
+    public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler, ModelAndView modelAndView) throws Exception {
+    }
+}
+
+// 这里我们模拟下拦截器
 public class ThreadLocalDemo {
 
     public static void main(String[] args) {
-        // 在main线程中设置当前用户信息为user1
         User user1 = new User(1, "user1");
         UserContext.setUser(user1);
-        // 打印main线程中当前用户信息，输出结果为user1
-        printUser();
 
-        Thread thread = new Thread(() -> {
-            // 打印子线程中当前用户信息，输出结果为null
-            printUser();
+        ThreadLocalDemo.printUser();
+        ThreadLocalDemo.printUser2();
 
-            // 在子线程中设置当前用户信息为user2
-            User user2 = new User(2, "user2");
-            UserContext.setUser(user2);
-            // 打印子线程中当前用户信息，输出结果为user2
-            printUser();
-        });
-        thread.start();
-
-        // 再打印main线程中当前用户信息，输出结果仍是user1
-        printUser();
+        UserContext.removeUser();
     }
 
+    // 打印当前登录用户信息
     public static void printUser() {
-        System.out.println("thread[" + Thread.currentThread().getName() + "] user:" + UserContext.getUser());
+        User currentUser = UserContext.getUser();
+        System.out.println("thread[" + Thread.currentThread().getName() + "] user:" + currentUser);
+    }
+
+    // 在子线程中获取ThreadLocal
+    public static void printUser2() {
+        Thread thread = new Thread(() -> {
+            User currentUser = UserContext.getUser();
+            System.out.println("thread[" + Thread.currentThread().getName() + "] user:" + currentUser);
+        });
+        thread.start();
     }
 }
 ```
@@ -289,11 +314,9 @@ public class ThreadLocalDemo {
 ```text
 thread[main] user:User{id=1, name='user1'}
 thread[Thread-0] user:null
-thread[Thread-0] user:User{id=2, name='user2'}
-thread[main] user:User{id=1, name='user1'}
 ```
 
-实际项目中，通常是在拦截器中设置登录用户信息上下文，请求处理之前，根据token获取用户信息并调用UserContext.serUser()，请求处理结束，调用UserContext.removeUser()删除当前登录用户上下文
+
 
 
  
@@ -314,34 +337,36 @@ public class InheritableUserContext {
         USER_CONTEXT.set(user);
     }
 
-    public static void remoteUser() {
+    public static void removeUser() {
         USER_CONTEXT.remove();
     }
 }
 
-public class ThreadLocalDemo3 {
+public class ThreadLocalDemo {
 
     public static void main(String[] args) {
-        // 在main线程中设置当前用户信息为user1
         User user1 = new User(1, "user1");
         InheritableUserContext.setUser(user1);
-        // 打印main线程中当前用户信息，输出结果为user1
-        printUser();
 
-        Thread thread = new Thread(() -> {
-            // 打印子线程中当前用户信息，输出结果为null
-            printUser();
+        ThreadLocalDemo.printUser();
+        ThreadLocalDemo.printUser2();
 
-            Thread thread1 = new Thread(() -> {
-                printUser();
-            });
-            thread1.start();
-        });
-        thread.start();
+        InheritableUserContext.removeUser();
     }
 
+    // 打印当前登录用户信息
     public static void printUser() {
-        System.out.println("thread[" + Thread.currentThread().getName() + "] user:" + InheritableUserContext.getUser());
+        User currentUser = InheritableUserContext.getUser();
+        System.out.println("thread[" + Thread.currentThread().getName() + "] user:" + currentUser);
+    }
+
+    // 在子线程中获取ThreadLocal
+    public static void printUser2() {
+        Thread thread = new Thread(() -> {
+            User currentUser = InheritableUserContext.getUser();
+            System.out.println("thread[" + Thread.currentThread().getName() + "] user:" + currentUser);
+        });
+        thread.start();
     }
 }
 ```
@@ -349,12 +374,11 @@ public class ThreadLocalDemo3 {
 ```text
 thread[main] user:User{id=1, name='user1'}
 thread[Thread-0] user:User{id=1, name='user1'}
-thread[Thread-1] user:User{id=1, name='user1'}
 ```
 
 **InheritableThreadLocal源码分析**
 
-InheritableThreadLocal继承自ThreadLocal，并重写了父类三个方法，不同于ThreadLocal，InheritableThreadLocal变量存放在Thread.inheritableThreadLocals而不是Thread.threadLocals中：
+InheritableThreadLocal继承自ThreadLocal，并重写了父类三个方法，InheritableThreadLocal变量存放在Thread.inheritableThreadLocals而不是Thread.threadLocals中
 ```java
 public class InheritableThreadLocal<T> extends ThreadLocal<T> {
     protected T childValue(T parentValue) {
@@ -396,7 +420,6 @@ public class Thread implements Runnable {
                 ThreadLocal.createInheritedMap(parent.inheritableThreadLocals);
     }
 }
-
 ```
 
 同时，ThreadLocal也为Thread.inheritableThreadLocals的复制提供了相应的接口：
@@ -580,6 +603,9 @@ thread[pool-1-thread-2] context: 0123456789
 ```
 在分布式系统中，需要传递的信息一般包括traceID、 spanID以及部分请求参数等。就可以使用这种方式进行上下文传递。
 
+
+## 总结
+ThreadLocal称为线程本地变量。通过每个线程存储一份变量副本，实现线程之间隔离的效果，只有在线程内才能获取到相应的值。在遇到多线程间共享变量安全问题时，使用ThreadLocal也是一种解决方案。
 <br/>
 <br/>
 

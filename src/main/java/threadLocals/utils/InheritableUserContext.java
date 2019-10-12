@@ -21,7 +21,7 @@ public class InheritableUserContext {
         USER_CONTEXT.set(user);
     }
 
-    public static void remoteUser() {
+    public static void removeUser() {
         USER_CONTEXT.remove();
     }
 }

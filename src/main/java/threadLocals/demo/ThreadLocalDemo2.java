@@ -1,4 +1,4 @@
-package threadLocals.name;
+package threadLocals.demo;
 
 import threadLocals.utils.User;
 

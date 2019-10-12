@@ -17,7 +17,7 @@ public class UserContext {
         USER_CONTEXT.set(user);
     }
 
-    public static void remoteUser() {
+    public static void removeUser() {
         USER_CONTEXT.remove();
     }
 }

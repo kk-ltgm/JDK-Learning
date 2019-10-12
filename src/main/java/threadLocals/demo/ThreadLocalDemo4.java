@@ -3,7 +3,7 @@
  * All rights reserved.
  *
  */
-package threadLocals.name;
+package threadLocals.demo;
 
 import threadLocals.utils.TraceCallable;
 import threadLocals.utils.TraceContext;
