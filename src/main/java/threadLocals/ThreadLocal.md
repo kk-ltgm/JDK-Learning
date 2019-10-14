@@ -254,7 +254,7 @@ public class UserContext {
         USER_CONTEXT.set(user);
     }
 
-    public static void remoteUser() {
+    public static void removeUser() {
         USER_CONTEXT.remove();
     }
 }
@@ -273,7 +273,7 @@ public class LoginInterceptor implements HandlerInterceptor {
 
     @Override
     public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) throws Exception {
-        UserContext.remoteUser();
+        UserContext.removeUser();
     }
 
     @Override

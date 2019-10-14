@@ -60,18 +60,18 @@ public class ThreadLocal<T> {
     private final int threadLocalHashCode = nextHashCode();
 
     /**
-     * nextHashCode原子更新器，初始值从0开始
+     * 原子计数器
      */
     private static AtomicInteger nextHashCode =
             new AtomicInteger();
 
     /**
-     * 斐波那契数列黄金分割数
+     * 哈希魔数增长值，也是带符号的32位整型值黄金分割值的取正
      */
     private static final int HASH_INCREMENT = 0x61c88647;
 
     /**
-     * 原子性获取nextHashCode，步长为HASH_INCREMENT
+     * 生成下一个哈希魔数
      */
     private static int nextHashCode() {
         return nextHashCode.getAndAdd(HASH_INCREMENT);
